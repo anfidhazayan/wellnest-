@@ -7,4 +7,6 @@ export interface Appointment {
   doctor: string;
   location: string;
   notes?: string;
+  reminder?: boolean;
+  reminderTime?: number; // minutes before appointment
 }
