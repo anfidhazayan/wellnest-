@@ -1,73 +1,72 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { EmergencyAlert, EmergencyAlertHistory } from "@/types/emergency";
-import { useElderlyProfile } from "@/contexts/ElderlyProfileContext";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper to convert database row to EmergencyAlert type
+const convertToEmergencyAlert = (dbAlert: any, contactsNotified: string[] = []): EmergencyAlert => {
+  return {
+    id: dbAlert.id,
+    timestamp: new Date(dbAlert.timestamp),
+    type: dbAlert.type as "emergency" | "medical" | "fall" | "other",
+    status: dbAlert.status as "active" | "resolved" | "canceled",
+    description: dbAlert.description,
+    location: dbAlert.location,
+    resolvedAt: dbAlert.resolved_at ? new Date(dbAlert.resolved_at) : undefined,
+    contactsNotified
+  };
+};
+
 export const useEmergencyAlerts = (): EmergencyAlertHistory => {
-  const { profile } = useElderlyProfile();
   const [alerts, setAlerts] = useState<EmergencyAlert[]>([]);
 
-  // Fetch alerts from Supabase on component mount
-  useEffect(() => {
-    const fetchAlerts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("emergency_alerts")
-          .select(`
-            id, 
-            timestamp, 
-            type, 
-            status, 
-            description, 
-            location, 
-            resolved_at
-          `)
-          .order("timestamp", { ascending: false });
+  // Fetch alerts from database
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const { data: alertsData, error: alertsError } = await supabase
+        .from('emergency_alerts')
+        .select('*')
+        .order('timestamp', { ascending: false });
 
-        if (error) {
-          console.error("Error fetching alerts:", error);
-          return;
-        }
-
-        // Fetch contacts notified for each alert
-        const alertsWithContacts = await Promise.all(
-          data.map(async (alert) => {
-            const { data: contactsData, error: contactsError } = await supabase
-              .from("alert_contacts_notified")
-              .select("contact_name")
-              .eq("alert_id", alert.id);
-
-            if (contactsError) {
-              console.error("Error fetching contacts:", contactsError);
-              return {
-                ...alert,
-                contactsNotified: []
-              };
-            }
-
-            return {
-              id: alert.id,
-              timestamp: new Date(alert.timestamp),
-              type: alert.type,
-              status: alert.status,
-              description: alert.description,
-              location: alert.location,
-              resolvedAt: alert.resolved_at ? new Date(alert.resolved_at) : undefined,
-              contactsNotified: contactsData.map(contact => contact.contact_name)
-            };
-          })
-        );
-
-        setAlerts(alertsWithContacts);
-      } catch (error) {
-        console.error("Error in fetchAlerts:", error);
+      if (alertsError) {
+        console.error("Error fetching alerts:", alertsError);
+        return [];
       }
+
+      // Fetch contacts notified for each alert
+      const alertsWithContacts = await Promise.all(
+        alertsData.map(async (alert) => {
+          const { data: contactsData, error: contactsError } = await supabase
+            .from('alert_contacts_notified')
+            .select('contact_name')
+            .eq('alert_id', alert.id);
+
+          if (contactsError) {
+            console.error("Error fetching contacts:", contactsError);
+            return convertToEmergencyAlert(alert, []);
+          }
+
+          const contactNames = contactsData ? contactsData.map(c => c.contact_name) : [];
+          return convertToEmergencyAlert(alert, contactNames);
+        })
+      );
+
+      return alertsWithContacts;
+    } catch (error) {
+      console.error("Error in fetchAlerts:", error);
+      return [];
+    }
+  }, []);
+
+  // Initialize alerts on component mount
+  useEffect(() => {
+    const initializeAlerts = async () => {
+      const alerts = await fetchAlerts();
+      setAlerts(alerts);
     };
 
-    // Call the async function
-    fetchAlerts();
+    initializeAlerts();
 
     // Set up a subscription for real-time updates
     const channel = supabase
@@ -81,7 +80,7 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
         },
         () => {
           // Refresh the alerts when there's a change
-          fetchAlerts();
+          initializeAlerts();
         }
       )
       .subscribe();
@@ -90,14 +89,15 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchAlerts]);
 
+  // Add a new alert
   const addAlert = useCallback(
-    async (alert: Omit<EmergencyAlert, "id" | "timestamp">) => {
+    async (alert: Omit<EmergencyAlert, "id" | "timestamp">): Promise<string> => {
       try {
-        // Insert the alert into Supabase
+        // Insert the alert into database
         const { data: alertData, error: alertError } = await supabase
-          .from("emergency_alerts")
+          .from('emergency_alerts')
           .insert({
             type: alert.type,
             status: alert.status,
@@ -118,19 +118,20 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
         }
 
         // Insert the contacts notified
-        const contactsToNotify = alert.contactsNotified || 
-          profile.emergencyContacts.map(contact => contact.name);
+        const contactsToNotify = alert.contactsNotified || [];
 
-        const contactPromises = contactsToNotify.map(contactName => 
-          supabase
-            .from("alert_contacts_notified")
+        for (const contactName of contactsToNotify) {
+          const { error: contactError } = await supabase
+            .from('alert_contacts_notified')
             .insert({
               alert_id: alertData.id,
               contact_name: contactName
-            })
-        );
+            });
 
-        await Promise.all(contactPromises);
+          if (contactError) {
+            console.error("Error adding contact notification:", contactError);
+          }
+        }
 
         toast({
           title: "Emergency Alert Created",
@@ -149,19 +150,20 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
         return "";
       }
     },
-    [profile.emergencyContacts]
+    []
   );
 
+  // Update an alert's status
   const updateAlertStatus = useCallback(
-    async (id: string, status: EmergencyAlert["status"], resolvedAt?: Date) => {
+    async (id: string, status: EmergencyAlert["status"], resolvedAt?: Date): Promise<boolean> => {
       try {
         const { error } = await supabase
-          .from("emergency_alerts")
+          .from('emergency_alerts')
           .update({ 
             status, 
             resolved_at: status === "resolved" ? resolvedAt || new Date() : null 
           })
-          .eq("id", id);
+          .eq('id', id);
 
         if (error) {
           console.error("Error updating alert status:", error);
@@ -189,53 +191,35 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
     []
   );
 
-  const getActiveAlerts = useCallback(async () => {
+  // Get active alerts
+  const getActiveAlerts = useCallback(async (): Promise<EmergencyAlert[]> => {
     try {
-      const { data, error } = await supabase
-        .from("emergency_alerts")
-        .select(`
-          id, 
-          timestamp, 
-          type, 
-          status, 
-          description, 
-          location, 
-          resolved_at
-        `)
-        .eq("status", "active")
-        .order("timestamp", { ascending: false });
+      const { data: alertsData, error: alertsError } = await supabase
+        .from('emergency_alerts')
+        .select('*')
+        .eq('status', 'active')
+        .order('timestamp', { ascending: false });
 
-      if (error) {
-        console.error("Error fetching active alerts:", error);
+      if (alertsError) {
+        console.error("Error fetching active alerts:", alertsError);
         return [];
       }
 
       // Fetch contacts notified for each alert
       const activeAlertsWithContacts = await Promise.all(
-        data.map(async (alert) => {
+        alertsData.map(async (alert) => {
           const { data: contactsData, error: contactsError } = await supabase
-            .from("alert_contacts_notified")
-            .select("contact_name")
-            .eq("alert_id", alert.id);
+            .from('alert_contacts_notified')
+            .select('contact_name')
+            .eq('alert_id', alert.id);
 
           if (contactsError) {
             console.error("Error fetching contacts:", contactsError);
-            return {
-              ...alert,
-              contactsNotified: []
-            };
+            return convertToEmergencyAlert(alert, []);
           }
 
-          return {
-            id: alert.id,
-            timestamp: new Date(alert.timestamp),
-            type: alert.type,
-            status: alert.status,
-            description: alert.description,
-            location: alert.location,
-            resolvedAt: alert.resolved_at ? new Date(alert.resolved_at) : undefined,
-            contactsNotified: contactsData.map(contact => contact.contact_name)
-          };
+          const contactNames = contactsData ? contactsData.map(c => c.contact_name) : [];
+          return convertToEmergencyAlert(alert, contactNames);
         })
       );
 
@@ -246,61 +230,15 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
     }
   }, []);
 
-  const getAllAlerts = useCallback(async () => {
+  // Get all alerts
+  const getAllAlerts = useCallback(async (): Promise<EmergencyAlert[]> => {
     try {
-      const { data, error } = await supabase
-        .from("emergency_alerts")
-        .select(`
-          id, 
-          timestamp, 
-          type, 
-          status, 
-          description, 
-          location, 
-          resolved_at
-        `)
-        .order("timestamp", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching all alerts:", error);
-        return [];
-      }
-
-      // Fetch contacts notified for each alert
-      const allAlertsWithContacts = await Promise.all(
-        data.map(async (alert) => {
-          const { data: contactsData, error: contactsError } = await supabase
-            .from("alert_contacts_notified")
-            .select("contact_name")
-            .eq("alert_id", alert.id);
-
-          if (contactsError) {
-            console.error("Error fetching contacts:", contactsError);
-            return {
-              ...alert,
-              contactsNotified: []
-            };
-          }
-
-          return {
-            id: alert.id,
-            timestamp: new Date(alert.timestamp),
-            type: alert.type,
-            status: alert.status,
-            description: alert.description,
-            location: alert.location,
-            resolvedAt: alert.resolved_at ? new Date(alert.resolved_at) : undefined,
-            contactsNotified: contactsData.map(contact => contact.contact_name)
-          };
-        })
-      );
-
-      return allAlertsWithContacts;
+      return await fetchAlerts();
     } catch (error) {
       console.error("Error in getAllAlerts:", error);
       return [];
     }
-  }, []);
+  }, [fetchAlerts]);
 
   return {
     alerts,
