@@ -157,11 +157,14 @@ export const useEmergencyAlerts = (): EmergencyAlertHistory => {
   const updateAlertStatus = useCallback(
     async (id: string, status: EmergencyAlert["status"], resolvedAt?: Date): Promise<boolean> => {
       try {
+        // Fix: Convert the Date object to an ISO string if it exists
+        const resolvedAtISO = resolvedAt ? resolvedAt.toISOString() : null;
+        
         const { error } = await supabase
           .from('emergency_alerts')
           .update({ 
             status, 
-            resolved_at: status === "resolved" ? resolvedAt || new Date() : null 
+            resolved_at: status === "resolved" ? resolvedAtISO : null 
           })
           .eq('id', id);
 
