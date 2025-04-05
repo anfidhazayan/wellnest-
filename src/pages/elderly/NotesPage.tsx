@@ -1,35 +1,40 @@
 
 import React from "react";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useElderlyProfile } from "@/contexts/ElderlyProfileContext";
-import { Clock } from "lucide-react";
+import { FileText } from "lucide-react";
+import EmergencyAlertHistory from "@/components/emergency/EmergencyAlertHistory";
 
 const NotesPage = () => {
   const { profile, handleChange, handleSave } = useElderlyProfile();
-  
+
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Clock className="h-5 w-5 text-medical-600 mr-2" />
-          Notes & Preferences
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <Label htmlFor="notes">Additional Notes</Label>
-          <Textarea id="notes" name="notes" value={profile.notes} onChange={handleChange} className="min-h-[120px]" />
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button onClick={handleSave} className="bg-medical-600 hover:bg-medical-700">
-          Save Profile
-        </Button>
-      </CardFooter>
-    </Card>
+    <div className="space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <FileText className="h-5 w-5 text-medical-600 mr-2" />
+            Notes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Textarea
+              name="notes"
+              value={profile.notes}
+              onChange={handleChange}
+              placeholder="Enter any additional notes about the elderly person..."
+              className="min-h-[200px]"
+            />
+            <Button onClick={handleSave}>Save Notes</Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <EmergencyAlertHistory />
+    </div>
   );
 };
 

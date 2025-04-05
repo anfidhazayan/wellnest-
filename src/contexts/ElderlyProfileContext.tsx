@@ -1,7 +1,8 @@
-
 import React, { createContext, useContext, useState } from "react";
 import { Appointment } from "@/types/appointment";
 import { toast } from "@/hooks/use-toast";
+import { useEmergencyAlerts } from "@/hooks/useEmergencyAlerts";
+import { EmergencyAlertHistory } from "@/types/emergency";
 
 type EmergencyContact = {
   name: string;
@@ -42,7 +43,8 @@ type ElderlyProfileContextType = {
   removeAppointment: (id: string) => void;
   addEmergencyContact: (contact: EmergencyContact) => void;
   removeEmergencyContact: (index: number) => void;
-  triggerEmergencyAlert: () => void;
+  triggerEmergencyAlert: (type?: "emergency" | "medical" | "fall" | "other", description?: string) => void;
+  emergencyAlerts: EmergencyAlertHistory;
 };
 
 const initialProfile = {
@@ -84,6 +86,7 @@ const ElderlyProfileContext = createContext<ElderlyProfileContextType | undefine
 
 export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [profile, setProfile] = useState<ElderlyProfile>(initialProfile);
+  const emergencyAlerts = useEmergencyAlerts();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -91,9 +94,7 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
   };
 
   const handleSave = () => {
-    // In a real application, you would save this to a database
     console.log("Saving profile:", profile);
-    // Show success message
     toast({
       title: "Success",
       description: "Profile saved successfully!",
@@ -167,19 +168,25 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
       description: `${contactName} has been removed from emergency contacts.`,
     });
   };
-  
-  const triggerEmergencyAlert = () => {
+
+  const triggerEmergencyAlert = (type: "emergency" | "medical" | "fall" | "other" = "emergency", description?: string) => {
     toast({
       title: "Emergency Alert Triggered",
       description: "Contacting emergency services and notifying emergency contacts.",
       variant: "destructive",
     });
     
-    // In a real application, you would send SMS/call emergency contacts
     console.log("EMERGENCY ALERT: Contacting emergency services and notifying emergency contacts");
     console.log("Emergency contacts to notify:", profile.emergencyContacts);
     
-    // Simulate calling emergency services
+    const alertId = emergencyAlerts.addAlert({
+      type,
+      status: "active",
+      contactsNotified: profile.emergencyContacts.map(contact => contact.name),
+      description,
+      location: profile.address
+    });
+    
     setTimeout(() => {
       toast({
         title: "Emergency Services Notified",
@@ -187,6 +194,17 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
         variant: "destructive",
       });
     }, 2000);
+
+    if (profile.emergencyContacts.length > 0) {
+      setTimeout(() => {
+        toast({
+          title: "Emergency Contacts Notified",
+          description: `${profile.emergencyContacts.length} emergency contacts have been notified.`,
+        });
+      }, 3000);
+    }
+    
+    return alertId;
   };
 
   return (
@@ -201,7 +219,8 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
       removeAppointment,
       addEmergencyContact,
       removeEmergencyContact,
-      triggerEmergencyAlert
+      triggerEmergencyAlert,
+      emergencyAlerts
     }}>
       {children}
     </ElderlyProfileContext.Provider>
