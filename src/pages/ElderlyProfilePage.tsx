@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { HeartPulse, ArrowLeft, UserRound, Wheelchair, Calendar, Clock } from "lucide-react";
+import { HeartPulse, ArrowLeft, UserRound, Activity, Calendar, Clock } from "lucide-react";
 
 const ElderlyProfilePage = () => {
   const { user } = useAuth();
@@ -106,7 +106,7 @@ const ElderlyProfilePage = () => {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Wheelchair className="h-5 w-5 text-medical-600 mr-2" />
+              <Activity className="h-5 w-5 text-medical-600 mr-2" />
               Medical Information
             </CardTitle>
           </CardHeader>
