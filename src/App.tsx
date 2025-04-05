@@ -15,6 +15,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import Dashboard from "./pages/Dashboard";
+import ElderlyProfilePage from "./pages/ElderlyProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             {/* Protected Routes */}
             <Route element={<PrivateRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/elderly-profile" element={<ElderlyProfilePage />} />
               {/* Add more protected routes here */}
             </Route>
             

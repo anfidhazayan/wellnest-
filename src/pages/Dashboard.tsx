@@ -1,9 +1,9 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { HeartPulse, Bell, Calendar, PlusCircle, LogOut } from "lucide-react";
+import { HeartPulse, Bell, Calendar, PlusCircle, LogOut, UserRound } from "lucide-react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -81,6 +81,27 @@ export default function Dashboard() {
                 <PlusCircle className="h-4 w-4 mr-1" />
                 Schedule Appointment
               </Button>
+            </CardFooter>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-lg font-medium">
+                <UserRound className="h-5 w-5 text-medical-600 mr-2" />
+                Elderly Profiles
+              </CardTitle>
+              <CardDescription>Manage care for loved ones</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-500">1 profile available</p>
+            </CardContent>
+            <CardFooter>
+              <Link to="/elderly-profile" className="w-full">
+                <Button className="w-full text-sm" variant="outline">
+                  <UserRound className="h-4 w-4 mr-1" />
+                  View Profile
+                </Button>
+              </Link>
             </CardFooter>
           </Card>
           
