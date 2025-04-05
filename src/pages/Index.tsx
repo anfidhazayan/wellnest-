@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { HeartPulse, Bell, Calendar, MicroscOff } from "lucide-react";
+import { HeartPulse, Bell, Calendar, Microscope } from "lucide-react";
 
 const Index = () => {
   return (
@@ -59,7 +59,7 @@ const Index = () => {
                 <p className="text-gray-600">Keep track of upcoming doctor appointments and health check-ups.</p>
               </div>
               <div className="bg-medical-50 p-6 rounded-lg border border-medical-100 col-span-1 md:col-span-2">
-                <MicroscOff className="h-10 w-10 text-medical-600 mb-4" />
+                <Microscope className="h-10 w-10 text-medical-600 mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Emergency Help</h3>
                 <p className="text-gray-600">In case of emergency, activate help with voice commands to alert your emergency contacts.</p>
               </div>
