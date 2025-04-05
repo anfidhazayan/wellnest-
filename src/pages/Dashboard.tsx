@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -96,7 +95,7 @@ export default function Dashboard() {
               <p className="text-sm text-gray-500">1 profile available</p>
             </CardContent>
             <CardFooter>
-              <Link to="/elderly-profile" className="w-full">
+              <Link to="/elderly-profile/personal" className="w-full">
                 <Button className="w-full text-sm" variant="outline">
                   <UserRound className="h-4 w-4 mr-1" />
                   View Profile
