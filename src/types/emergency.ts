@@ -12,8 +12,8 @@ export interface EmergencyAlert {
 
 export interface EmergencyAlertHistory {
   alerts: EmergencyAlert[];
-  addAlert: (alert: Omit<EmergencyAlert, "id" | "timestamp">) => string;
-  updateAlertStatus: (id: string, status: EmergencyAlert["status"], resolvedAt?: Date) => boolean;
-  getActiveAlerts: () => EmergencyAlert[];
-  getAllAlerts: () => EmergencyAlert[];
+  addAlert: (alert: Omit<EmergencyAlert, "id" | "timestamp">) => Promise<string>;
+  updateAlertStatus: (id: string, status: EmergencyAlert["status"], resolvedAt?: Date) => Promise<boolean>;
+  getActiveAlerts: () => Promise<EmergencyAlert[]>;
+  getAllAlerts: () => Promise<EmergencyAlert[]>;
 }

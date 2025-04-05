@@ -1,8 +1,10 @@
+
 import React, { createContext, useContext, useState } from "react";
 import { Appointment } from "@/types/appointment";
 import { toast } from "@/hooks/use-toast";
 import { useEmergencyAlerts } from "@/hooks/useEmergencyAlerts";
 import { EmergencyAlertHistory } from "@/types/emergency";
+import { supabase } from "@/integrations/supabase/client";
 
 type EmergencyContact = {
   name: string;
@@ -43,7 +45,7 @@ type ElderlyProfileContextType = {
   removeAppointment: (id: string) => void;
   addEmergencyContact: (contact: EmergencyContact) => void;
   removeEmergencyContact: (index: number) => void;
-  triggerEmergencyAlert: (type?: "emergency" | "medical" | "fall" | "other", description?: string) => void;
+  triggerEmergencyAlert: (type?: "emergency" | "medical" | "fall" | "other", description?: string) => Promise<string>;
   emergencyAlerts: EmergencyAlertHistory;
 };
 
@@ -169,7 +171,7 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
     });
   };
 
-  const triggerEmergencyAlert = (type: "emergency" | "medical" | "fall" | "other" = "emergency", description?: string) => {
+  const triggerEmergencyAlert = async (type: "emergency" | "medical" | "fall" | "other" = "emergency", description?: string) => {
     toast({
       title: "Emergency Alert Triggered",
       description: "Contacting emergency services and notifying emergency contacts.",
@@ -179,7 +181,7 @@ export const ElderlyProfileProvider: React.FC<{children: React.ReactNode}> = ({ 
     console.log("EMERGENCY ALERT: Contacting emergency services and notifying emergency contacts");
     console.log("Emergency contacts to notify:", profile.emergencyContacts);
     
-    const alertId = emergencyAlerts.addAlert({
+    const alertId = await emergencyAlerts.addAlert({
       type,
       status: "active",
       contactsNotified: profile.emergencyContacts.map(contact => contact.name),

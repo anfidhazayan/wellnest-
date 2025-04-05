@@ -1,11 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useElderlyProfile } from "@/contexts/ElderlyProfileContext";
-import { UserRound, PlusCircle, XCircle, Bell, Mic, AlertTriangle } from "lucide-react";
+import { UserRound, PlusCircle, XCircle, Bell, Mic, AlertTriangle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useForm } from "react-hook-form";
@@ -23,6 +23,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmergencyAlert } from "@/types/emergency";
 
 const PersonalInfoPage = () => {
   const { profile, handleChange, addEmergencyContact, removeEmergencyContact, triggerEmergencyAlert, emergencyAlerts } = useElderlyProfile();
@@ -30,8 +31,31 @@ const PersonalInfoPage = () => {
   const [isListening, setIsListening] = useState(false);
   const [emergencyType, setEmergencyType] = useState<"emergency" | "medical" | "fall" | "other">("emergency");
   const [emergencyDescription, setEmergencyDescription] = useState("");
+  const [activeAlerts, setActiveAlerts] = useState<EmergencyAlert[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const activeAlerts = emergencyAlerts.getActiveAlerts();
+  useEffect(() => {
+    const fetchActiveAlerts = async () => {
+      setLoading(true);
+      try {
+        const alerts = await emergencyAlerts.getActiveAlerts();
+        setActiveAlerts(alerts);
+      } catch (error) {
+        console.error("Error fetching active alerts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActiveAlerts();
+
+    // Set up an interval to refresh active alerts every 30 seconds
+    const intervalId = setInterval(fetchActiveAlerts, 30000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [emergencyAlerts]);
   
   const form = useForm({
     defaultValues: {
@@ -56,9 +80,9 @@ const PersonalInfoPage = () => {
         setIsListening(false);
         if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
           // Real implementation would go here
-          triggerEmergencyAlert();
+          handleEmergencyAlertSubmit();
         } else {
-          triggerEmergencyAlert(); // Trigger anyway for demo
+          handleEmergencyAlertSubmit(); // Trigger anyway for demo
         }
       }, 3000);
     } else {
@@ -66,17 +90,27 @@ const PersonalInfoPage = () => {
     }
   };
 
-  const handleEmergencyAlertSubmit = () => {
-    triggerEmergencyAlert(emergencyType, emergencyDescription);
+  const handleEmergencyAlertSubmit = async () => {
+    await triggerEmergencyAlert(emergencyType, emergencyDescription);
     setEmergencyDescription("");
+    
+    // Refresh the active alerts
+    const alerts = await emergencyAlerts.getActiveAlerts();
+    setActiveAlerts(alerts);
   };
 
-  const handleResolveAlert = (alertId: string) => {
-    emergencyAlerts.updateAlertStatus(alertId, "resolved");
+  const handleResolveAlert = async (alertId: string) => {
+    await emergencyAlerts.updateAlertStatus(alertId, "resolved");
+    // Refresh the active alerts
+    const alerts = await emergencyAlerts.getActiveAlerts();
+    setActiveAlerts(alerts);
   };
 
-  const handleCancelAlert = (alertId: string) => {
-    emergencyAlerts.updateAlertStatus(alertId, "canceled");
+  const handleCancelAlert = async (alertId: string) => {
+    await emergencyAlerts.updateAlertStatus(alertId, "canceled");
+    // Refresh the active alerts
+    const alerts = await emergencyAlerts.getActiveAlerts();
+    setActiveAlerts(alerts);
   };
   
   return (
@@ -87,7 +121,17 @@ const PersonalInfoPage = () => {
         <AlertDescription className="flex justify-between items-center">
           <span>Press the microphone button and say "Help" or "Emergency" to trigger an emergency alert</span>
           <div className="flex gap-2">
-            {activeAlerts.length > 0 && (
+            {loading ? (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                disabled
+                className="border-gray-300"
+              >
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                Loading...
+              </Button>
+            ) : activeAlerts.length > 0 && (
               <Sheet>
                 <SheetTrigger asChild>
                   <Button 

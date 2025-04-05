@@ -1,14 +1,49 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useElderlyProfile } from "@/contexts/ElderlyProfileContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmergencyAlert } from "@/types/emergency";
 
 const EmergencyAlertHistory = () => {
   const { emergencyAlerts } = useElderlyProfile();
-  const allAlerts = emergencyAlerts.getAllAlerts();
+  const [allAlerts, setAllAlerts] = useState<EmergencyAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      setLoading(true);
+      try {
+        const alerts = await emergencyAlerts.getAllAlerts();
+        setAllAlerts(alerts);
+      } catch (error) {
+        console.error("Error fetching alerts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAlerts();
+  }, [emergencyAlerts]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-medical-600 mr-2" />
+            Emergency Alert History
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-medical-500" />
+          <span className="ml-2 text-gray-500">Loading alerts...</span>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (allAlerts.length === 0) {
     return (
@@ -57,12 +92,18 @@ const EmergencyAlertHistory = () => {
     return `${date.toLocaleDateString()} at ${date.toLocaleTimeString()}`;
   };
 
-  const handleResolveAlert = (alertId: string) => {
-    emergencyAlerts.updateAlertStatus(alertId, "resolved");
+  const handleResolveAlert = async (alertId: string) => {
+    await emergencyAlerts.updateAlertStatus(alertId, "resolved");
+    // Refresh the alerts
+    const updatedAlerts = await emergencyAlerts.getAllAlerts();
+    setAllAlerts(updatedAlerts);
   };
 
-  const handleCancelAlert = (alertId: string) => {
-    emergencyAlerts.updateAlertStatus(alertId, "canceled");
+  const handleCancelAlert = async (alertId: string) => {
+    await emergencyAlerts.updateAlertStatus(alertId, "canceled");
+    // Refresh the alerts
+    const updatedAlerts = await emergencyAlerts.getAllAlerts();
+    setAllAlerts(updatedAlerts);
   };
 
   return (

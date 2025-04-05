@@ -9,6 +9,38 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      alert_contacts_notified: {
+        Row: {
+          alert_id: string | null
+          contact_id: string | null
+          contact_name: string
+          id: string
+          notified_at: string
+        }
+        Insert: {
+          alert_id?: string | null
+          contact_id?: string | null
+          contact_name: string
+          id?: string
+          notified_at?: string
+        }
+        Update: {
+          alert_id?: string | null
+          contact_id?: string | null
+          contact_name?: string
+          id?: string
+          notified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_contacts_notified_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "emergency_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       "appoinmnet reminder": {
         Row: {
           appoinmentt_date: string | null
@@ -75,6 +107,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      emergency_alerts: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          resolved_at: string | null
+          status: string
+          timestamp: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          resolved_at?: string | null
+          status?: string
+          timestamp?: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          resolved_at?: string | null
+          status?: string
+          timestamp?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       "medication reminder table": {
         Row: {
